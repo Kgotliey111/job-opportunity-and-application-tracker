@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Find jobs — Job Opportunity and Application Tracker</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="jobs.html">Find jobs</a>
+    <a href="applications.html">My applications</a>
+  </nav>
+
+  <h1>Find job opportunities</h1>
+  <p>Live listings from <a href="https://arbeitnow.com" target="_blank" rel="noopener">Arbeitnow's free job board API</a>. Filter, view full details, then save any job to start tracking it.</p>
+
+  <form id="search-form">
+    <input type="text" id="keyword" placeholder="Keyword (e.g. java, marketing, nurse)" />
+    <input type="text" id="location" placeholder="Location (e.g. Berlin, Cape Town)" />
+    <select id="jobType">
+      <option value="">Any job type</option>
+      <option value="full_time">Full-time</option>
+      <option value="part_time">Part-time</option>
+      <option value="contract">Contract</option>
+      <option value="internship">Internship</option>
+      <option value="freelance">Freelance</option>
+    </select>
+    <label style="display:flex; align-items:center; gap:0.4rem; font-weight:normal;">
+      <input type="checkbox" id="remoteOnly" style="width:auto;" />
+      Remote only
+    </label>
+    <button type="submit">Search</button>
+  </form>
+
+  <div id="status"></div>
+  <div id="results"></div>
+
+  <!-- Details view: hidden until a job is opened -->
+  <div id="details-overlay" class="details-overlay" hidden>
+    <div class="details-panel">
+      <button id="close-details" class="secondary" type="button">Close</button>
+      <div id="details-content"></div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    const form = document.getElementById("search-form");
+    const resultsEl = document.getElementById("results");
+    const statusEl = document.getElementById("status");
+    const overlay = document.getElementById("details-overlay");
+    const detailsContent = document.getElementById("details-content");
+
+    let currentResults = [];
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await runSearch();
+    });
+
+    async function runSearch() {
+      const filters = {
+        keyword: document.getElementById("keyword").value.trim(),
+        location: document.getElementById("location").value.trim(),
+        jobType: document.getElementById("jobType").value,
+        remoteOnly: document.getElementById("remoteOnly").checked,
+      };
+
+      statusEl.innerHTML = '<p class="empty">Searching...</p>';
+      resultsEl.innerHTML = "";
+
+      try {
+        const jobs = await searchJobs(filters);
+        currentResults = jobs;
+        statusEl.innerHTML = jobs.length
+          ? `<p class="empty">${jobs.length} result${jobs.length === 1 ? "" : "s"}</p>`
+          : "";
+
+        if (jobs.length === 0) {
+          resultsEl.innerHTML = '<p class="empty">No jobs matched those filters. Try loosening one.</p>';
+          return;
+        }
+
+        resultsEl.innerHTML = jobs.slice(0, 30).map((job, i) => `
+          <div class="card">
+            <h3>${escapeHtml(job.title)}</h3>
+            <div class="meta">
+              ${escapeHtml(job.companyName || "Unknown company")}
+              ${job.location ? " &middot; " + escapeHtml(job.location) : ""}
+              ${job.remote ? " &middot; Remote" : ""}
+            </div>
+            ${(job.jobTypes || []).map(t => `<span class="status-badge">${escapeHtml(t.replace("_", " "))}</span>`).join(" ")}
+            <p>${escapeHtml(job.description || "")}</p>
+            <div class="actions">
+              <button class="secondary" type="button" onclick="showDetails(${i})">View details</button>
+              <button onclick="saveJob(${i})">Save to my applications</button>
+            </div>
+          </div>
+        `).join("");
+      } catch (err) {
+        statusEl.innerHTML = '<p class="error">Could not reach the backend or Arbeitnow. Is the server running on port 7000?</p>';
+      }
+    }
+
+    function showDetails(index) {
+      const job = currentResults[index];
+      detailsContent.innerHTML = `
+        <h2>${escapeHtml(job.title)}</h2>
+        <div class="meta">
+          ${escapeHtml(job.companyName || "Unknown company")}
+          ${job.location ? " &middot; " + escapeHtml(job.location) : ""}
+          ${job.remote ? " &middot; Remote" : ""}
+        </div>
+        ${(job.jobTypes || []).map(t => `<span class="status-badge">${escapeHtml(t.replace("_", " "))}</span>`).join(" ")}
+        ${(job.tags || []).length ? `<p><strong>Tags:</strong> ${job.tags.map(escapeHtml).join(", ")}</p>` : ""}
+        <p>${escapeHtml(job.fullDescription || job.description || "No description available.")}</p>
+        <div class="actions">
+          <button onclick="saveJob(${index}); closeDetails();">Save to my applications</button>
+          ${job.url ? `<a href="${job.url}" target="_blank" rel="noopener"><button class="secondary" type="button">View original posting</button></a>` : ""}
+        </div>
+      `;
+      overlay.hidden = false;
+    }
+
+    function closeDetails() {
+      overlay.hidden = true;
+    }
+
+    document.getElementById("close-details").addEventListener("click", closeDetails);
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) closeDetails(); });
+
+    async function saveJob(index) {
+      const job = currentResults[index];
+      try {
+        await createApplication({
+          jobTitle: job.title,
+          company: job.companyName,
+          status: "Saved",
+          dateApplied: null,
+          deadline: null,
+          notes: "",
+          sourceUrl: job.url,
+        });
+        statusEl.innerHTML = '<p>Saved! Check "My applications" to track it.</p>';
+      } catch (err) {
+        statusEl.innerHTML = '<p class="error">Could not save this job.</p>';
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str || "";
+      return div.innerHTML;
+    }
+
+    // Show an unfiltered "latest listings" set on page load.
+    runSearch();
+  </script>
+</body>
+</html>
