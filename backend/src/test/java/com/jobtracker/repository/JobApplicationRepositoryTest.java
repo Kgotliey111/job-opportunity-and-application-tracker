@@ -51,7 +51,7 @@ class JobApplicationRepositoryTest {
     @Test
     void saveDefaultsStatusToSavedWhenNoneProvided() {
         JobApplication app = new JobApplication(
-                null, "DevOps Engineer", "TestCorp-Default", null,
+                null, "DevOps Engineer", "TestCorp-Default", "Saved",
                 null, null, null, null
         );
 
