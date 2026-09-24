@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Job Opportunity and Application Tracker</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="jobs.html">Find jobs</a>
+    <a href="applications.html">My applications</a>
+  </nav>
+
+  <h1>Job Opportunity and Application Tracker</h1>
+  <p>Search real job listings, save the ones you like, and track every application through to an outcome.</p>
+
+  <div id="summary" class="card">
+    <p class="empty">Loading summary...</p>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    async function loadSummary() {
+      const el = document.getElementById("summary");
+      try {
+        const apps = await getApplications();
+        const byStatus = {};
+        apps.forEach(a => { byStatus[a.status] = (byStatus[a.status] || 0) + 1; });
+
+        if (apps.length === 0) {
+          el.innerHTML = '<p class="empty">No applications tracked yet. Head to "Find jobs" to search and save one.</p>';
+          return;
+        }
+
+        const rows = Object.entries(byStatus)
+          .map(([status, count]) => `<li><span class="status-badge status-${status}">${status}</span> &times; ${count}</li>`)
+          .join("");
+
+        el.innerHTML = `
+          <h3>You're tracking ${apps.length} application${apps.length === 1 ? "" : "s"}</h3>
+          <ul>${rows}</ul>
+        `;
+      } catch (err) {
+        el.innerHTML = '<p class="error">Could not reach the backend. Is it running on port 7000?</p>';
+      }
+    }
+    loadSummary();
+  </script>
+</body>
+</html>
