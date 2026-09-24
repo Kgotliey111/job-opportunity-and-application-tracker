@@ -18,7 +18,7 @@
     </properties>
 
     <dependencies>
-        <!-- Javalin: the web framework -- handles routes and serves static files -->
+        <!-- Javalin: the web framework - handles routes and serves static files -->
         <dependency>
             <groupId>io.javalin</groupId>
             <artifactId>javalin</artifactId>
@@ -44,17 +44,31 @@
             <version>2.2.224</version>
         </dependency>
 
-        <!-- Logging (Javalin/Jetty expect an slf4j implementation) -->
+        <!-- Logging (Javalin/Jetty expect a slf4j implementation) -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>2.0.13</version>
+        </dependency>
+
+        <!-- JUnit 5 for unit and integration tests -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
     <build>
         <finalName>job-opportunity-and-application-tracker</finalName>
         <plugins>
+            <!-- Runs JUnit 5 tests during `mvn test` -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
             <!-- Bundles all dependencies into one runnable jar -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
