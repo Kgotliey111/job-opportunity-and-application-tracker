@@ -23,7 +23,9 @@ public class ArbeitnowService {
     // job type, and remote-only are filtered here in Java after fetching.
     private static final String BASE_URL = "https://arbeitnow.com/api/job-board-api";
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .build();
     private final ObjectMapper mapper = new ObjectMapper();
 
     /**
@@ -44,9 +46,9 @@ public class ArbeitnowService {
             }
 
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .GET()
-                .build();
+                    .uri(URI.create(url))
+                    .GET()
+                    .build();
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
@@ -79,7 +81,7 @@ public class ArbeitnowService {
 
             if (jobType != null && !jobType.isBlank()) {
                 boolean matches = job.getJobTypes() != null && job.getJobTypes().stream()
-                    .anyMatch(t -> t.equalsIgnoreCase(jobType));
+                        .anyMatch(t -> t.equalsIgnoreCase(jobType));
                 if (!matches) continue;
             }
 
@@ -99,15 +101,15 @@ public class ArbeitnowService {
                 String plainDescription = stripHtml(rawDescription);
 
                 JobListing listing = new JobListing(
-                    textOrNull(job, "title"),
-                    textOrNull(job, "company_name"),
-                    textOrNull(job, "location"),
-                    job.has("remote") && job.get("remote").asBoolean(),
-                    textOrNull(job, "url"),
-                    truncate(plainDescription, 300),
-                    plainDescription,
-                    toStringList(job.get("tags")),
-                    toStringList(job.get("job_types"))
+                        textOrNull(job, "title"),
+                        textOrNull(job, "company_name"),
+                        textOrNull(job, "location"),
+                        job.has("remote") && job.get("remote").asBoolean(),
+                        textOrNull(job, "url"),
+                        truncate(plainDescription, 300),
+                        plainDescription,
+                        toStringList(job.get("tags")),
+                        toStringList(job.get("job_types"))
                 );
                 listings.add(listing);
             }
