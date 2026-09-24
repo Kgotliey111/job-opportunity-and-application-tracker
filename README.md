@@ -77,3 +77,7 @@ directly, so there's nothing else to start.
   paste me the error and I'll fix it.
 - The Arbeitnow API is mostly Europe/remote-focused — worth checking search
   results match what you expect for your demo before presenting.
+
+  Your verification code:
+
+WTC-5ZV4F67W
