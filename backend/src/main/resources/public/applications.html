@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My applications — Job Opportunity and Application Tracker</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="jobs.html">Find jobs</a>
+    <a href="applications.html">My applications</a>
+  </nav>
+
+  <h1>My applications</h1>
+
+  <form id="add-form">
+    <input type="text" id="jobTitle" placeholder="Job title" required />
+    <input type="text" id="company" placeholder="Company" required />
+    <input type="date" id="dateApplied" />
+    <input type="date" id="deadline" />
+    <textarea id="notes" placeholder="Notes (optional)" rows="2"></textarea>
+    <button type="submit">Add manually</button>
+  </form>
+
+  <div id="status"></div>
+  <div id="list"></div>
+
+  <script src="js/api.js"></script>
+  <script>
+    const STATUSES = ["Saved", "Applied", "Interview", "Offer", "Accepted", "Rejected"];
+
+    const listEl = document.getElementById("list");
+    const statusEl = document.getElementById("status");
+    const addForm = document.getElementById("add-form");
+
+    async function loadApplications() {
+      try {
+        const apps = await getApplications();
+
+        if (apps.length === 0) {
+          listEl.innerHTML = '<p class="empty">No applications yet. Add one below or save a job from "Find jobs".</p>';
+          return;
+        }
+
+        listEl.innerHTML = apps.map(app => `
+          <div class="card">
+            <h3>${escapeHtml(app.jobTitle)}</h3>
+            <div class="meta">
+              ${escapeHtml(app.company)}
+              ${app.dateApplied ? " &middot; Applied " + escapeHtml(app.dateApplied) : ""}
+              ${app.deadline ? " &middot; Deadline " + escapeHtml(app.deadline) : ""}
+            </div>
+            <span class="status-badge status-${app.status}">${app.status}</span>
+            ${app.notes ? `<p>${escapeHtml(app.notes)}</p>` : ""}
+            <div class="actions">
+              <select onchange="changeStatus(${app.id}, this.value)">
+                ${STATUSES.map(s => `<option value="${s}" ${s === app.status ? "selected" : ""}>${s}</option>`).join("")}
+              </select>
+              <button class="danger" onclick="removeApplication(${app.id})">Delete</button>
+              ${app.sourceUrl ? `<a href="${app.sourceUrl}" target="_blank" rel="noopener"><button class="secondary" type="button">View posting</button></a>` : ""}
+            </div>
+          </div>
+        `).join("");
+      } catch (err) {
+        listEl.innerHTML = '<p class="error">Could not reach the backend. Is it running on port 7000?</p>';
+      }
+    }
+
+    addForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const app = {
+        jobTitle: document.getElementById("jobTitle").value.trim(),
+        company: document.getElementById("company").value.trim(),
+        status: "Applied",
+        dateApplied: document.getElementById("dateApplied").value || null,
+        deadline: document.getElementById("deadline").value || null,
+        notes: document.getElementById("notes").value.trim(),
+        sourceUrl: null,
+      };
+
+      try {
+        await createApplication(app);
+        addForm.reset();
+        await loadApplications();
+      } catch (err) {
+        statusEl.innerHTML = '<p class="error">Could not save this application.</p>';
+      }
+    });
+
+    async function changeStatus(id, newStatus) {
+      // Fetch current state so we only change the status field, not overwrite everything.
+      const apps = await getApplications();
+      const app = apps.find(a => a.id === id);
+      if (!app) return;
+      app.status = newStatus;
+
+      try {
+        await updateApplication(id, app);
+        await loadApplications();
+      } catch (err) {
+        statusEl.innerHTML = '<p class="error">Could not update status.</p>';
+      }
+    }
+
+    async function removeApplication(id) {
+      try {
+        await deleteApplication(id);
+        await loadApplications();
+      } catch (err) {
+        statusEl.innerHTML = '<p class="error">Could not delete this application.</p>';
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str || "";
+      return div.innerHTML;
+    }
+
+    loadApplications();
+  </script>
+</body>
+</html>
